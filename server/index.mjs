@@ -10,7 +10,7 @@ import { encryptSecret, decryptSecret } from "./lib/crypto.mjs";
 import { ProviderRouter } from "./lib/router.mjs";
 import { safePath, runCommand, walkTree } from "./lib/sandbox.mjs";
 import { isDueToday } from "./lib/scheduler.mjs";
-import { connectorCatalog, publishConnector } from "./lib/connectors.mjs";
+import { connectorCatalog } from "./lib/connectors.mjs";
 import { buildFallbackPlan, parseModelPlan } from "./lib/agent.mjs";
 import { trimMessages } from "./lib/context.mjs";
 

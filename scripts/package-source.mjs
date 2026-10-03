@@ -1,0 +1,11 @@
+import fs from "node:fs";
+import path from "node:path";
+import archiver from "archiver";
+const out=path.resolve(process.env.OUTPUT_ZIP||"leveling_v0.12.0_source.zip");
+const archive=archiver("zip",{zlib:{level:9}});
+const stream=fs.createWriteStream(out);
+stream.on("close",()=>console.log("created "+out));
+archive.on("error",e=>{throw e});
+archive.pipe(stream);
+archive.glob("**/*",{ignore:["node_modules/**","dist/**",".git/**","workspace/.leveling/**","workspace/smoke.txt","leveling_v0.12.0_source.zip"]});
+await archive.finalize();

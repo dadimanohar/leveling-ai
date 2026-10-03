@@ -11,7 +11,8 @@ import { ProviderRouter } from "./lib/router.mjs";
 import { safePath, runCommand, walkTree } from "./lib/sandbox.mjs";
 import { isDueToday } from "./lib/scheduler.mjs";
 import { connectorCatalog, publishConnector } from "./lib/connectors.mjs";
-import { buildFallbackPlan, parseModelPlan } from "./lib/agent.mjs";\nimport { trimMessages } from "./lib/context.mjs";
+import { buildFallbackPlan, parseModelPlan } from "./lib/agent.mjs";
+import { trimMessages } from "./lib/context.mjs";
 
 const PORT = Number(process.env.PORT || 4174);
 const ROOT = path.resolve(process.env.LEVELING_WORKSPACE || "./workspace");

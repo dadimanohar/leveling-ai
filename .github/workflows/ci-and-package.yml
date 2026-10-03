@@ -1,0 +1,32 @@
+name: leveling v0.12 CI
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      LEVELING_MASTER_KEY: ci-only-change-me-leveling-v12
+      LEVELING_WORKSPACE: ./workspace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npm run check
+      - run: npm run build
+      - name: Start local core
+        run: nohup node server/index.mjs >/tmp/leveling.log 2>&1 &
+      - run: sleep 2
+      - run: npm run smoke
+      - if: always()
+        run: cat /tmp/leveling.log || true
+      - run: npm run package:source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: leveling-v0.12.0-source
+          path: leveling_v0.12.0_source.zip
+          if-no-files-found: error

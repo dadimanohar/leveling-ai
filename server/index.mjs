@@ -21,7 +21,8 @@ const PROVIDERS_FILE = path.join(DATA, "providers.json");
 const TASKS_FILE = path.join(DATA, "tasks.json");
 const MASTER = process.env.LEVELING_MASTER_KEY || "";
 const DEV_MASTER = "replace-with-a-long-random-secret";
-const MAX_BODY = 5_000_000;\nconst CONTEXT_BUDGET = Number(process.env.LEVELING_CONTEXT_TOKENS || 32768);
+const MAX_BODY = 5_000_000;
+const CONTEXT_BUDGET = Number(process.env.LEVELING_CONTEXT_TOKENS || 32768);
 
 async function ensure() {
   await fs.mkdir(ROOT, { recursive: true });

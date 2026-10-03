@@ -1,0 +1,10 @@
+{
+  "base_model":"YOUR_BASE_MODEL_OR_LOCAL_PATH",
+  "output_dir":"./models/leveling-sft",
+  "max_seq_length":4096,
+  "epochs":1,
+  "learning_rate":0.00002,
+  "sources_allowlist":["example.org"],
+  "min_quality_score":0.8,
+  "eval_gate":{"max_eval_loss":2.5}
+}

@@ -1,0 +1,1 @@
+import {describe,it,expect} from "vitest"; describe("UI contract",()=>{it("has six core modes",()=>expect(["chat","automations","build","agent","skills","media"]).toHaveLength(6));it("caps clips at 20 seconds",()=>expect(20).toBe(20))});

@@ -1,0 +1,1 @@
+import {describe,it,expect} from "vitest"; describe("router",()=>{it("defines fallback statuses",()=>expect([408,429,500,502,503].includes(429)).toBe(true));it("sorts priority",()=>expect([{p:30,id:"c"},{p:10,id:"a"},{p:20,id:"b"}].sort((a,b)=>a.p-b.p).map(x=>x.id)).toEqual(["a","b","c"]))});

@@ -11,7 +11,7 @@ import { ProviderRouter } from "./lib/router.mjs";
 import { safePath, runCommand, walkTree } from "./lib/sandbox.mjs";
 import { isDueToday } from "./lib/scheduler.mjs";
 import { connectorCatalog, publishConnector } from "./lib/connectors.mjs";
-import { buildFallbackPlan, parseModelPlan } from "./lib/agent.mjs";
+import { buildFallbackPlan, parseModelPlan } from "./lib/agent.mjs";\nimport { trimMessages } from "./lib/context.mjs";
 
 const PORT = Number(process.env.PORT || 4174);
 const ROOT = path.resolve(process.env.LEVELING_WORKSPACE || "./workspace");
@@ -20,7 +20,7 @@ const PROVIDERS_FILE = path.join(DATA, "providers.json");
 const TASKS_FILE = path.join(DATA, "tasks.json");
 const MASTER = process.env.LEVELING_MASTER_KEY || "";
 const DEV_MASTER = "replace-with-a-long-random-secret";
-const MAX_BODY = 5_000_000;
+const MAX_BODY = 5_000_000;\nconst CONTEXT_BUDGET = Number(process.env.LEVELING_CONTEXT_TOKENS || 32768);
 
 async function ensure() {
   await fs.mkdir(ROOT, { recursive: true });
@@ -278,7 +278,7 @@ const server = http.createServer(async (req, res) => {
     const u = new URL(req.url, "http://" + req.headers.host);
 
     if (req.method === "GET" && u.pathname === "/api/health") {
-      return send(res, 200, { ok: true, version: "0.12.0", workspace: ROOT, secureMaster: Boolean(MASTER && MASTER !== DEV_MASTER) });
+      return send(res, 200, { ok: true, version: "0.12.0", workspace: ROOT, secureMaster: Boolean(MASTER && MASTER !== DEV_MASTER), contextBudgetTokens: CONTEXT_BUDGET });
     }
 
     if (req.method === "GET" && u.pathname === "/api/providers") {

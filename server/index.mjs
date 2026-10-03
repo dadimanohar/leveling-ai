@@ -339,6 +339,18 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && u.pathname === "/api/workspace/export") return send(res, 200, { ok: true, path: await createZip() });
 
+    if (req.method === "GET" && u.pathname === "/api/workspace/export") {
+      const name = u.searchParams.get("name") || "";
+      if (!/^leveling-workspace-\\d+\\.zip$/.test(name)) return send(res, 400, { error: "invalid export name" });
+      const file = safePath(ROOT, name);
+      const data = await fs.readFile(file);
+      res.writeHead(200, {"content-type":"application/zip","content-disposition":"attachment; filename=\""+name+"\"","cache-control":"no-store"});
+      res.end(data);
+      return;
+    }
+
+
+
     if (req.method === "GET" && u.pathname === "/api/automations") return send(res, 200, { tasks: await readJson(TASKS_FILE) });
 
     if (req.method === "POST" && u.pathname === "/api/automations") {
@@ -391,6 +403,23 @@ const server = http.createServer(async (req, res) => {
         results.push("wrote " + f.path);
       }
       return send(res, 200, { ok: true, results });
+    }
+
+
+    if (req.method === "POST" && u.pathname === "/api/agent/repair") {
+      const b = await getBody(req);
+      if (!b.providerId) return send(res, 400, { error: "Select an external model for automatic repair." });
+      const result = await route({
+        providerId: b.providerId,
+        messages: [
+          { role:"system", content:"You are a senior software repair agent. Return ONLY JSON with summary, steps[{id,title,detail}], files[{path,action,content}], commands[{command,args}]. Repair the reported failure. Use only workspace-relative paths and never destructive commands." },
+          { role:"user", content:"Task:\n"+String(b.prompt||"")+"\n\nFailure:\n"+String(b.error||"") }
+        ],
+        maxTokens: 3500
+      });
+      if (result.fallback) return send(res, 503, { error:"The selected model could not produce an automatic repair plan.", provider:result.provider });
+      try { return send(res,200,{ok:true,plan:parseModelPlan(result.content),provider:result.provider}); }
+      catch (e) { return send(res,502,{error:"Model returned an invalid repair plan.",detail:String(e.message||e)}); }
     }
 
     if (req.method === "POST" && u.pathname === "/api/skill/run") {

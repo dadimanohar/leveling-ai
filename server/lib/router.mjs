@@ -1,29 +1,4 @@
-export function shouldFailover(error){
-  const status=Number(error?.status || 0);
-  if([408,409,429].includes(status) || status>=500) return true;
-  return /context|token|timeout|rate.?limit|temporar|inference/i.test(String(error?.message || ""));
-}
-export function orderCandidates(providers,preferredId){
-  const enabled=(providers||[]).filter(p=>p.enabled!==false).slice().sort((a,b)=>(a.priority||100)-(b.priority||100));
-  if(!preferredId) return enabled;
-  return enabled.filter(p=>p.id===preferredId).concat(enabled.filter(p=>p.id!==preferredId));
-}
-export class ProviderRouter{
-  constructor({providers,decrypt,callProvider}){this.providers=providers;this.decrypt=decrypt;this.callProvider=callProvider;}
-  async run(body,preferredId){
-    const candidates=orderCandidates(this.providers,preferredId);
-    if(!candidates.length) return {provider:"leveling local",providerId:"local",content:"No external model is configured. Add an API key from the model selector.",usage:{},fallback:true};
-    const failures=[];
-    for(const provider of candidates){
-      try{
-        const secret=this.decrypt(provider.secret);
-        const result=await this.callProvider(provider,secret,body);
-        return Object.assign({},result,{provider:provider.name,providerId:provider.id,fallback:false});
-      }catch(error){
-        failures.push({provider:provider.name,status:error?.status||0,message:String(error?.message||error)});
-        if(!shouldFailover(error)){ const e=new Error("Provider failed without a failover-safe error"); e.failures=failures;e.status=error?.status||500;throw e; }
-      }
-    }
-    const e=new Error("All configured providers failed");e.failures=failures;e.status=503;throw e;
-  }
-}
+const RETRYABLE=new Set(["rate_limit","timeout","provider_unavailable","context_overflow","transient_inference"]);const STOP=new Set(["authentication","permission","billing","invalid_request","unsupported","policy"]);
+export function classifyFailure(error){const s=Number(error?.status||0),m=String(error?.message||"").toLowerCase();if(s===401||s===403||/invalid api key|authentication|unauthor/i.test(m))return"authentication";if(/permission|forbidden|access denied/i.test(m))return"permission";if(s===402||/billing|quota exceeded/i.test(m))return"billing";if(s===429||/rate.?limit|too many requests/i.test(m))return"rate_limit";if(s===408||/timeout|timed out|abort/i.test(m))return"timeout";if(s>=500||/temporar|unavailable|overloaded|bad gateway|gateway timeout/i.test(m))return"provider_unavailable";if(s===413||/context|maximum context|too many tokens|prompt.*too long/i.test(m))return"context_overflow";if(s===400||/invalid request|malformed|unsupported/i.test(m))return/unsupported/i.test(m)?"unsupported":"invalid_request";if(/network|socket|fetch failed|inference/i.test(m))return"transient_inference";return"unknown"}export function shouldFailover(error){return RETRYABLE.has(classifyFailure(error))}
+export function orderCandidates(providers=[],preferred){const enabled=providers.filter(p=>p&&p.enabled!==false).slice().sort((a,b)=>(a.priority??100)-(b.priority??100));if(!preferred||preferred==="auto")return enabled;return enabled.filter(p=>p.id===preferred).concat(enabled.filter(p=>p.id!==preferred))}
+export class ProviderRouter{constructor({providers,decrypt,callProvider,trace=()=>{}}){this.providers=providers;this.decrypt=decrypt;this.callProvider=callProvider;this.trace=trace}async run(payload,preferred){const failures=[];for(const p of orderCandidates(this.providers,preferred)){try{this.trace({event:"provider_attempt",provider:p.name,providerId:p.id});const key=p.secret?this.decrypt(p.secret):"";const result=await this.callProvider(p,key,payload);return{...result,provider:p.name,providerId:p.id,fallback:failures.length>0,fallbackReason:failures[0]?.reason||null,failures}}catch(e){const reason=classifyFailure(e),f={provider:p.name,providerId:p.id,status:Number(e?.status||0),reason,message:String(e?.message||e)};failures.push(f);this.trace({event:"provider_failure",...f});if(STOP.has(reason)||!shouldFailover(e))throw Object.assign(new Error("Provider request failed: "+f.message),{status:Number(e?.status||500),code:reason,failures})}}throw Object.assign(new Error("All configured providers failed"),{status:503,code:"all_failed",failures})}}

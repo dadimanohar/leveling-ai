@@ -1,16 +1,1 @@
-const DEFAULT_MAX_TOKENS=32768;
-export function estimateTokens(text){return Math.ceil(String(text||"").length/4);}
-export function trimMessages(messages,maxTokens=DEFAULT_MAX_TOKENS){
-  const list=Array.isArray(messages)?messages.slice():[];
-  let total=list.reduce((n,m)=>n+estimateTokens(m.content),0);
-  if(total<=maxTokens)return list;
-  const system=list.filter(m=>m.role==="system");
-  const rest=list.filter(m=>m.role!=="system");
-  const kept=[];
-  let budget=Math.max(1024,maxTokens-system.reduce((n,m)=>n+estimateTokens(m.content),0));
-  for(let i=rest.length-1;i>=0 && budget>0;i--){
-    const cost=estimateTokens(rest[i].content);
-    if(cost<=budget){kept.unshift(rest[i]);budget-=cost}
-  }
-  return system.concat(kept);
-}
+const DEFAULT_CONTEXT=32768;export function estimateTokens(text){const s=String(text||"");let n=0;for(const c of s)if(c.charCodeAt(0)>255)n++;return Math.max(1,Math.ceil((s.length-n)/4)+Math.ceil(n/2))}export function messageTokens(ms=[]){return ms.reduce((n,m)=>n+estimateTokens(m?.content),0)}export function trimMessages(messages,maxTokens=DEFAULT_CONTEXT,reservedOutput=2048){const list=Array.isArray(messages)?messages.slice():[],sys=list.filter(m=>m.role==="system"),rest=list.filter(m=>m.role!=="system"),budget=Math.max(256,maxTokens-reservedOutput-messageTokens(sys));if(messageTokens(rest)<=budget)return sys.concat(rest);let rem=budget,keep=[];for(let i=rest.length-1;i>=0&&rem>0;i--){const c=estimateTokens(rest[i]?.content);if(c<=rem){keep.unshift(rest[i]);rem-=c}else if(i===rest.length-1){keep.unshift({...rest[i],content:String(rest[i]?.content||"").slice(-Math.max(32,rem*4))});rem=0}}return sys.concat(keep)}export function fitPayload(messages,contextWindow=DEFAULT_CONTEXT,maxOutputTokens=2048){const cw=Math.max(1024,Number(contextWindow||DEFAULT_CONTEXT));const out=Math.min(Math.max(128,Number(maxOutputTokens||2048)),Math.floor(cw*.4));const kept=trimMessages(messages,cw,out);return{messages:kept,inputTokens:messageTokens(kept),maxOutputTokens:out,contextWindow:cw}}

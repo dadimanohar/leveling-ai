@@ -1,16 +1,1 @@
-export function parseDailySchedule(schedule){
-  const m=String(schedule||"").trim().match(/^daily\s+(\d{1,2}):(\d{2})$/i);
-  if(!m) return null;
-  const hour=Number(m[1]),minute=Number(m[2]);
-  if(hour>23||minute>59) return null;
-  return {hour,minute};
-}
-export function isDueToday(task,now=new Date()){
-  if(!task.enabled) return false;
-  const p=parseDailySchedule(task.schedule);if(!p) return false;
-  if(task.lastRun){
-    const last=new Date(task.lastRun);
-    if(last.getFullYear()===now.getFullYear()&&last.getMonth()===now.getMonth()&&last.getDate()===now.getDate()) return false;
-  }
-  return now.getHours()===p.hour&&now.getMinutes()===p.minute;
-}
+function parts(now,tz){const p=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now),o={};for(const x of p)o[x.type]=x.value;return o}export function parseDailySchedule(s){const m=String(s||"").trim().match(/^daily\s+(\d{1,2}):(\d{2})$/i);if(!m)return null;const h=+m[1],mi=+m[2];return h<24&&mi<60?{hour:h,minute:mi}:null}export function isDueToday(task,now=new Date(),tz=process.env.LEVELING_TIMEZONE||"Asia/Kolkata"){if(!task?.enabled)return false;const q=parseDailySchedule(task.schedule);if(!q)return false;const z=parts(now,tz),today=z.year+"-"+z.month+"-"+z.day;if(task.lastRun){const l=parts(new Date(task.lastRun),tz);if(l.year+"-"+l.month+"-"+l.day===today)return false}return +z.hour*60+ +z.minute>=q.hour*60+q.minute}
